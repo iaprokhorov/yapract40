@@ -1,0 +1,78 @@
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+# Ingest data by tailing one or more files
+sources:
+
+  docker:
+    type: docker_logs
+    docker_host: "http://host.docker.internal:2375"
+    include_containers: 
+      - webserver
+      - bingo
+
+transforms:
+
+  logFilter:
+    type: filter
+    inputs:
+      - "docker"
+    condition:
+      contains(string!(.container_name), "webserver") || (contains(string!(.container_name), "bingo") && contains(string!(.message), "info") && contains(string!(.message), "error"))
+
+  bingo-bongo:
+    type: remap
+    inputs:
+      - "logFilter"
+    source: |-
+      del(.container_id)
+      del(.host)
+      del(.image)
+      del(.label)
+
+      # if contains(string!(.container_name), "bingo") {
+      # .parse_msg = parse_json!(.message, max_depth: 2)
+      # .orig_msg = del(.message)
+      # .message = del(.msg)
+      # }
+
+  throttle_events:
+    type: throttle
+    inputs:
+      - bingo-bongo
+    threshold: 2
+    window_secs: 1
+
+sinks:
+
+  console:
+    inputs: 
+      - "bingo-bongo"
+    type: "console"     
+    target: "stdout"
+    encoding:
+      codec: "json"
+
+  # to_prom:
+  #   type: prometheus_exporter
+  #   inputs:
+  #     - bingo-bongo
+  #   address: "127.0.0.1:9598" 
+
+  # to_opensearch:
+  #   inputs:
+  #     - throttle_events
+  #   type: elasticsearch
+  #   endpoints: [https://10.10.3.170:9200]
+
+  #   bulk:
+  #     action: "create"
+  #     index: 'logs-bingo'
+  #   tls:
+  #     verify_certificate: false
+  #   auth:
+  #     user: "admin"
+  #     password: "admin"
+  #     strategy: basic    
+

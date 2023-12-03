@@ -1,0 +1,10 @@
+student_email: user@pro.com
+postgres_cluster:
+  hosts:
+  - address: 9qhbfc5uk9.rw.mdb.yandexcloud.net
+    port: 6432
+  user: postgresuser
+  password: password
+  db_name: pg-prod
+  ssl_mode: disable
+  use_closest_node: false

@@ -1,0 +1,16 @@
+---
+- name: Install NTPD
+  ansible.builtin.apt:
+    pkg: ntp
+    state: present
+  notify:
+    - ntp running
+
+- name: Dis cronyd
+  ansible.builtin.apt:
+    name: cronyd
+    state: absent
+
+- name: Set timezone to Europe/Moscow
+  community.general.timezone:
+    name: Europe/Moscow

@@ -1,0 +1,10 @@
+student_email: user@pro.com
+postgres_cluster:
+  hosts:
+  - address: 10.10.10.10
+    port: 5432
+  user: postgresuser
+  password: postgres-pass
+  db_name: postgres
+  ssl_mode: disable
+  use_closest_node: false

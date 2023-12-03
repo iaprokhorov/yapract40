@@ -1,0 +1,32 @@
+- name: Disable empty password login
+  ansible.builtin.lineinfile:
+    dest: "{{ sshd_config }}"
+    regexp: '^#?PermitEmptyPasswords'
+    line: 'PermitEmptyPasswords no'
+  notify: Restart sshd
+
+- name: Disable remote root login
+  ansible.builtin.lineinfile:
+    dest: "{{ sshd_config }}"
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+  notify: Restart sshd
+
+- name: Disable password login
+  ansible.builtin.lineinfile:
+    dest: "{{ sshd_config }}"
+    regexp: '^(#\s*)?PasswordAuthentication '
+    line: 'PasswordAuthentication no'
+  notify: Restart sshd
+
+- name: Enable PAM
+  ansible.builtin.lineinfile:
+    dest: "{{ sshd_config }}"
+    regexp: '^#?UsePAM'
+    line: 'UsePAM yes'
+  notify: Restart sshd
+
+- name: Reload service ssh
+  ansible.builtin.systemd:
+    name: sshd
+    state: reloaded

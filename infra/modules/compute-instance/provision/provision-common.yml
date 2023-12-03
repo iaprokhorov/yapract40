@@ -1,0 +1,7 @@
+- name: Provision common
+  hosts: all
+  become: true
+  ignore_errors: true
+  gather_facts: false
+  roles:
+    - role: common

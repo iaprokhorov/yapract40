@@ -1,0 +1,5 @@
+---
+- name: Ntp running
+  ansible.builtin.service:
+    name: ntp
+    state: started

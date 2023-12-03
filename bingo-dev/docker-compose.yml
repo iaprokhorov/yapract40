@@ -1,0 +1,147 @@
+version: "3.9"
+services:
+
+#Bingo Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yandex/bingo
+    container_name: bingo
+    restart: always
+    tty: true
+    ports:
+      - "16320:16320"
+    working_dir: /app
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:16320/ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 5
+      start_period: 33s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.00'
+          memory: 4000M
+        reservations:
+          cpus: '0.100'
+          memory: 200M
+    labels:
+      "autoheal": "true"  
+
+#Nginx Service
+  webserver:
+    image: nginx:alpine3.18
+    container_name: webserver
+    sysctls:
+      net.core.somaxconn: 4096
+    restart: always
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8081"
+    depends_on:
+      - app
+    networks:
+      - app-network
+    volumes:
+      - ./nginx/index.html:/usr/share/nginx/html/index.html
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./letsencrypt/conf:/etc/letsencrypt
+      - ./letsencrypt/data:/var/www/certbot/
+      - nginx_access_logs:/opt
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/index.html"]
+      interval: 1s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+    labels:
+      "autoheal": "true"
+
+#Certbot
+  certbot:
+    image: certbot/certbot:v2.7.4
+    container_name: certbot
+    depends_on:
+      - webserver
+    command: >-
+             certonly --reinstall --webroot --webroot-path=/var/www/certbot
+             --email app@httop.ru --agree-tos --no-eff-email
+             -d app.httop.ru
+    volumes:
+      - ./letsencrypt/data:/var/www/certbot
+      - ./letsencrypt/conf/:/etc/letsencrypt
+    networks:
+      - app-network      
+
+#AutoHeal
+  autoheal:
+    image: willfarrell/autoheal
+    container_name: autoheal
+    restart: always
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    environment:
+      - AUTOHEAL_INTERVAL=5
+      - CURL_TIMEOUT=5
+    networks:
+      - app-network
+
+#Vector-agent
+  vector:
+    image: timberio/vector:0.34.1-alpine
+    container_name: vector
+    restart: always
+    volumes: 
+      - './vector/vector.yaml:/etc/vector/vector.yaml:ro'
+    ports:
+      - "8686:8686"
+      - "9598:9598"
+    networks:
+      - app-network
+    labels:
+      "autoheal": "true"
+
+#Exporters for prometheus
+  telegraf:
+    image: telegraf:1.28-alpine
+    container_name: telegraf
+    restart: always
+    ports:
+      - '9126:9126'    
+    volumes:
+      - ./telegraf:/etc/telegraf/
+      - nginx_access_logs:/opt  
+    networks:
+      - app-network
+    labels:
+    "autoheal": "true"     
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:0.8.0
+    container_name: nginxexporter
+    ports:
+     - "9113:9113"      
+    command:
+      - -nginx.scrape-uri 
+      - http://webserver:8081/status 
+      - -nginx.retries=5
+    networks:
+      - app-network
+    labels:
+    "autoheal": "true"           
+
+#Docker Volumes
+volumes:
+  nginx_access_logs:
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge

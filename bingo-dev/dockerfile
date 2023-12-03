@@ -1,0 +1,30 @@
+# Start from alpine base image
+FROM alpine:3.18
+ARG USERNAME=depups
+ARG GROUP=depups
+# Setup folders
+RUN mkdir /app && \ 
+    mkdir -p /opt/bingo/ && \
+    mkdir -p /opt/bongo/logs/798fae5531/ && \
+    mkdir -p /private/tmp && \
+    mkdir -p /var/run/postgresql && \
+    touch /opt/bongo/logs/798fae5531/main.log && \
+    ln -sf /dev/stdout /opt/bongo/logs/798fae5531/main.log && \
+    addgroup -S $GROUP && \
+    adduser -S $USERNAME -G $GROUP && \
+    chown -R $USERNAME:$GROUP /opt/bongo/logs/798fae5531/ && \
+    chown -R $USERNAME:$GROUP /private/tmp && \
+    chown -R $USERNAME:$GROUP /var/run/postgresql && \
+    apk --no-cache add curl=8.4.0-r0 && \
+    apk --no-cache add tcpdump=4.99.4-r1 
+
+WORKDIR /app
+COPY ./bingo .
+RUN chmod +x bingo
+COPY ./config.yaml /opt/bingo/
+# Create the user
+USER $USERNAME
+# Expose port 16320 to the outside world
+EXPOSE 16320
+#CMD [ "./bingo", "print_current_config" ]
+ENTRYPOINT [ "./bingo", "run_server" ]

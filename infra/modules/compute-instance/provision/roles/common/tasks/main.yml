@@ -1,0 +1,65 @@
+---
+- name: Upd cache and pkgs
+  ansible.builtin.apt:
+    update_cache: true
+    # upgrade: safe
+
+- name: Tune sysct conf
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+  with_items:
+    - { name: 'vm.swappiness', value: '5' }
+    - { name: 'net.ipv4.ip_local_port_range', value: '1024 65535' }
+    - { name: 'net.ipv4.tcp_tw_reuse', value: '1' }
+    - { name: 'net.core.somaxconn', value: '65535' }
+    - { name: 'net.core.netdev_max_backlog', value: '8192' }
+    - { name: 'net.core.rmem_max', value: '16777216' }
+    - { name: 'net.core.wmem_max', value: '16777216' }
+    - { name: 'net.core.rmem_default', value: '16777216' }
+    - { name: 'net.core.wmem_default', value: '16777216' }
+    - { name: 'net.core.optmem_max', value: '40960' }
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '32768' }
+    - { name: 'net.ipv4.tcp_syn_retries', value: '2' }
+    - { name: 'net.ipv4.tcp_synack_retries', value: '2' }
+    - { name: 'net.ipv4.tcp_fin_timeout', value: '10' }
+    - { name: 'net.ipv4.tcp_syncookies', value: '0' }
+    - { name: 'net.ipv4.tcp_rmem', value: '4096 1048576 16777216' }
+    - { name: 'net.ipv4.tcp_wmem', value: '4096 1048576 16777216' }
+    - { name: 'net.ipv4.tcp_slow_start_after_idle', value: '0' }
+    - { name: 'net.ipv4.tcp_mtu_probing', value: '0' }
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+    - { name: 'vm.max_map_count', value: '1048575' }
+
+# - name: Chck if need reboot
+#   register: reboot_file
+#   stat:
+#     path: /var/run/reboot-required
+#     get_md5: false
+
+# - name: Reboot Ubuntu Server
+#   ansible.builtin.reboot:
+#     msg: "Reboot initiated by Ansible due to kernel update"
+#     connect_timeout: 5
+#     reboot_timeout: 120
+#     pre_reboot_delay: 0
+#     post_reboot_delay: 5
+#     test_command: uptime
+#   when: reboot_file.stat.exists
+
+- name: Install common software
+  ansible.builtin.apt:
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - vim
+      - jq
+      - qrencode
+    state: present
+
+# - name: Change the hostname to our standard
+#   hostname:
+#     name: "{{ inventory_hostname }}"
+#   when:
+#     ansible_fqdn != ansible_host

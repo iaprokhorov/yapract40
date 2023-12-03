@@ -1,0 +1,7 @@
+- name: Wait for host became ready
+  hosts: all
+  become: true
+  ignore_errors: true
+  gather_facts: false
+  roles:
+    - role: wait-for-connection
